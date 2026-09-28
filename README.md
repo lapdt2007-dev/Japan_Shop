@@ -90,8 +90,8 @@ Dự án được xây dựng và phát triển bởi các thành viên **Nhóm 
 | STT | Họ và Tên | Vai trò / Nhiệm vụ | GitHub |
 | :---: | :--- | :--- | :---: |
 | 1 | Đinh Thành Lập | Leader / Backend Developer | https://github.com/lapdt2007-dev |
-| 2 | Trần Tấn Đạt | Frontend Developer / UI-UX | https://github.com/antruong31 |
-| 3 | Lê Nguyễn An Trường| Backend Developer / Database | https://github.com/datstyle |
+| 2 | Trần Tấn Đạt | Frontend Developer / UI-UX | https://github.com/datstyle  |
+| 3 | Lê Nguyễn An Trường| Backend Developer / Database | https://github.com/antruong31|
 
 ---
 
