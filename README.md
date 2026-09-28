@@ -97,9 +97,9 @@ Dự án được xây dựng và phát triển bởi các thành viên **Nhóm 
 
 ## 🛠 Công nghệ sử dụng (Tech Stack)
 
-- **Backend:** [PHP 8.x](https://www.php.net/), [Laravel Framework](https://laravel.com)
+- **Backend:** [PHP > 8.x](https://www.php.net/), [Laravel Framework](https://laravel.com)
 - **Database:** [MySQL](https://www.mysql.com/)
-- **Frontend:** HTML5, CSS3, JavaScript, Bootstrap / Tailwind CSS, Blade Template Engine
+- **Frontend:** HTML5, CSS3, JavaScript,note.js, typescript, Bootstrap / Tailwind CSS, Blade Template Engine
 - **Tools:** Git, GitHub, Composer, VS Code
 
 ---
