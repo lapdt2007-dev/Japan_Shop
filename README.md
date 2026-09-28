@@ -24,13 +24,12 @@
 - **Giao diện người dùng (Customer Front-end):**
   - Danh mục sản phẩm chuẩn Nhật Bản, tìm kiếm & bộ lọc thông minh.
   - Quản lý giỏ hàng, giỏ hàng tạm lưu và thanh toán trực tuyến.
-  - Đăng ký / Đăng nhập tài khoản, quản lý thông tin cá nhân và lịch sử đơn hàng.
+  - Đăng ký / Đăng nhập tài khoản và lịch sử đơn hàng.
   - Đánh giá và bình luận sản phẩm.
 
 - **Hệ thống quản trị (Admin Dashboard):**
-  - Quản lý sản phẩm, danh mục, thương hiệu và kho hàng.
+  - Quản lý sản phẩm và kho hàng.
   - Quản lý đơn hàng, cập nhật trạng thái giao hàng.
-  - Quản lý người dùng, phân quyền hệ thống.
   - Thống kê doanh thu, báo cáo chi tiết.
 
 ---
@@ -41,7 +40,7 @@
 
 1. **Clone repository về máy:**
    ```bash
-   git clone https://github.com/your-username/japan-shop.git
+   git clone: ----updating-----
    cd japan-shop
    ```
 
@@ -71,7 +70,7 @@
    DB_PASSWORD=
    ```
 
-6. **Chạy Migration và Seed dữ liệu mẫu (nếu có):**
+6. **Chạy Migration và Seed dữ liệu mẫu:**
    ```bash
    php artisan migrate --seed
    ```
@@ -90,10 +89,9 @@ Dự án được xây dựng và phát triển bởi các thành viên **Nhóm 
 
 | STT | Họ và Tên | Vai trò / Nhiệm vụ | GitHub |
 | :---: | :--- | :--- | :---: |
-| 1 | Nguyễn Văn A | Leader / Backend Developer | [@link-github](https://github.com) |
-| 2 | Trần Thị B | Frontend Developer / UI-UX | [@link-github](https://github.com) |
-| 3 | Lê Văn C | Backend Developer / Database | [@link-github](https://github.com) |
-| 4 | Phạm Thị D | Tester / Documentation | [@link-github](https://github.com) |
+| 1 | Đinh Thành Lập | Leader / Backend Developer | https://github.com/lapdt2007-dev |
+| 2 | Trần Tấn Đạt | Frontend Developer / UI-UX | https://github.com/antruong31 |
+| 3 | Lê Nguyễn An Trường| Backend Developer / Database | https://github.com/datstyle |
 
 ---
 
