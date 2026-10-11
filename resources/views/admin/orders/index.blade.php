@@ -15,6 +15,7 @@
         <a href="/" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-house me-1"></i> Xem Website</a>
     </div>
 
+    @include('partials.flash-errors')
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="fa-solid fa-circle-check me-2"></i>{{ session('success') }}

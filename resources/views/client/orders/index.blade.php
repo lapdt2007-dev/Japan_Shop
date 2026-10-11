@@ -134,8 +134,7 @@
                     <select name="payment_method" class="form-select form-select-sm">
                         <option value="all">Tất cả</option>
                         <option value="cod" {{ request('payment_method') === 'cod' ? 'selected' : '' }}>Thanh toán khi nhận hàng (COD)</option>
-                        <option value="bank_transfer" {{ request('payment_method') === 'bank_transfer' ? 'selected' : '' }}>Chuyển khoản ngân hàng</option>
-                        <option value="momo" {{ request('payment_method') === 'momo' ? 'selected' : '' }}>Ví MoMo</option>
+                        <option value="bank" {{ request('payment_method') === 'bank' ? 'selected' : '' }}>Chuyển khoản ngân hàng</option>
                     </select>
                 </div>
 

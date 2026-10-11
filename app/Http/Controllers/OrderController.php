@@ -41,7 +41,7 @@ class OrderController extends Controller
 
         // ===== Bộ lọc tìm kiếm nâng cao =====
         if ($request->filled('keyword')) {
-            $keyword = $request->keyword;
+            $keyword = addcslashes((string) $request->keyword, '%_\\');
             $query->where(function ($q) use ($keyword) {
                 $q->where('order_code', 'like', '%' . $keyword . '%')
                   ->orWhereHas('items.product', function ($q2) use ($keyword) {
@@ -58,8 +58,9 @@ class OrderController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
+        // Giá trị lưu trong DB là 'COD' | 'BANK' (chữ hoa), form gửi lên 'cod' | 'bank'
         if ($request->filled('payment_method') && $request->payment_method !== 'all') {
-            $query->where('payment_method', $request->payment_method);
+            $query->where('payment_method', strtoupper($request->payment_method));
         }
 
         if ($request->filled('status') && $request->status !== 'all') {

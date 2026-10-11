@@ -10,6 +10,7 @@
 <div class="container bg-white p-4 rounded-3 shadow-sm" style="max-width: 700px;">
     <h3 class="fw-bold text-success mb-4">➕ Thêm Sản Phẩm Mới</h3>
 
+    @include('partials.flash-errors')
     <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
 

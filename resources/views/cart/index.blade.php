@@ -23,6 +23,7 @@
         <h3 class="fw-bold mb-4"><i class="fa-solid fa-cart-shopping text-danger me-2"></i>Giỏ Hàng Của Bạn</h3>
 
         <!-- Thông báo flash alert -->
+        @include('partials.flash-errors')
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <i class="fa-solid fa-circle-check me-2"></i>{{ session('success') }}
@@ -81,7 +82,7 @@
                                                 <form action="{{ route('cart.update', $id) }}" method="POST" class="d-flex gap-1">
                                                     @csrf
                                                     @method('PATCH')
-                                                    <input type="number" name="quantity" value="{{ $item['quantity'] }}" min="1" class="form-control form-control-sm text-center">
+                                                    <input type="number" name="quantity" value="{{ $item['quantity'] }}" min="1" @if(!empty($item['stock'])) max="{{ $item['stock'] }}" @endif class="form-control form-control-sm text-center">
                                                     <button type="submit" class="btn btn-sm btn-outline-secondary" title="Cập nhật">
                                                         <i class="fa-solid fa-rotate"></i>
                                                     </button>

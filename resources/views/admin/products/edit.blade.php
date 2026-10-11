@@ -10,6 +10,7 @@
 <div class="container bg-white p-4 rounded-3 shadow-sm" style="max-width: 650px;">
     <h3 class="fw-bold text-warning mb-4">✏️ Chỉnh Sửa Sản Phẩm #{{ $product->id }}</h3>
 
+    @include('partials.flash-errors')
     <form action="{{ route('admin.products.update', $product->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')

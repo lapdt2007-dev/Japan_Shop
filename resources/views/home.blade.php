@@ -284,6 +284,11 @@
                 </div>
             </div>
         </header>
+@if(session('error') || session('warning') || $errors->any())
+<div class="container-fluid px-3 px-lg-4 mt-3">
+    @include('partials.flash-errors')
+</div>
+@endif
         <!-- Thông báo -->
         @if(session('success'))
             <div class="container-fluid px-3 px-lg-4 mt-3">
@@ -497,6 +502,5 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-@include('partials.chatbot');
 </body>
 </html>

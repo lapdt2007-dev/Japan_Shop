@@ -2,12 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Category;
-use App\Models\ProductImage;
-use App\Models\CartItem;
-use App\Models\OrderItem;
 
 class Product extends Model
 {
@@ -24,6 +21,10 @@ class Product extends Model
         'quantity',
         'status',
     ];
+
+    /* ------------------------------------------------------------------ */
+    /*  Quan hệ                                                            */
+    /* ------------------------------------------------------------------ */
 
     public function category()
     {
@@ -45,25 +46,79 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    public function scopeFilter($query, array $filters)
-    {
-        $query->when($filters['category'] ?? null, function ($q, $category) {
-            $q->whereHas('category', function ($catQuery) use ($category) {
-                $catQuery->where('slug', $category);
-            });
-        });
-
-        $query->when($filters['search'] ?? null, function ($q, $search) {
-            $q->where(function ($subQuery) use ($search) {
-                $subQuery->where('name', 'like', '%' . $search . '%')
-                         ->orWhere('description', 'like', '%' . $search . '%');
-            });
-        });
-    }
-
     public function reviews()
     {
         return $this->hasMany(Review::class);
     }
-    
+
+    /* ------------------------------------------------------------------ */
+    /*  Giá                                                                */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Giá bán thực tế: dùng giá khuyến mãi nếu hợp lệ (> 0 và nhỏ hơn giá gốc).
+     * Nhận cả giá trị thô để dùng được với kết quả DB::table() (stdClass).
+     */
+    public static function resolvePrice($price, $salePrice = null): int
+    {
+        $price = (int) $price;
+        $sale  = $salePrice === null ? 0 : (int) $salePrice;
+
+        return ($sale > 0 && $sale < $price) ? $sale : $price;
+    }
+
+    public function getCurrentPriceAttribute(): int
+    {
+        return static::resolvePrice($this->price, $this->sale_price);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Scope                                                              */
+    /* ------------------------------------------------------------------ */
+
+    /** Chỉ sản phẩm đang mở bán. */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', 1);
+    }
+
+    /** Lọc theo danh mục (slug) và từ khoá. Dùng chung cho trang chủ / hàng hoá / quốc tế. */
+    public function scopeFilter(Builder $query, array $filters): Builder
+    {
+        $category = $filters['category'] ?? null;
+        if (is_string($category) && $category !== '') {
+            $query->whereHas('category', fn ($q) => $q->where('slug', $category));
+        }
+
+        $search = $filters['search'] ?? null;
+        if (is_string($search) && trim($search) !== '') {
+            // Escape % và _ để người dùng không tự tạo wildcard
+            $like = '%' . addcslashes(trim($search), '%_\\') . '%';
+
+            $query->where(function ($q) use ($like) {
+                $q->where('name', 'like', $like)
+                  ->orWhere('description', 'like', $like);
+            });
+        }
+
+        return $query;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Nghiệp vụ                                                          */
+    /* ------------------------------------------------------------------ */
+
+    /** Người dùng đã nhận hàng (đơn completed) sản phẩm này chưa? */
+    public function wasPurchasedBy(?int $userId): bool
+    {
+        if (!$userId) {
+            return false;
+        }
+
+        return OrderItem::where('product_id', $this->id)
+            ->whereHas('order', function ($q) use ($userId) {
+                $q->where('user_id', $userId)->where('order_status', 'completed');
+            })
+            ->exists();
+    }
 }

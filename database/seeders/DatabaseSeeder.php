@@ -18,8 +18,9 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Tạo 1 Admin + 20 Khách hàng (>= 20 Users)
-        User::create([
+        // 1. Tạo 1 Admin + 20 Khách hàng (>= 20 Users). Dùng forceCreate vì 'role' không nằm trong $fillable.
+        // Tài khoản mẫu chỉ dành cho môi trường phát triển — đổi mật khẩu admin trước khi đưa lên production.
+        User::forceCreate([
             'name'     => 'Quản Trị Viên',
             'email'    => 'admin@gmail.com',
             'password' => Hash::make('password'),
@@ -29,7 +30,7 @@ class DatabaseSeeder extends Seeder
 
         $users = [];
         for ($i = 1; $i <= 20; $i++) {
-            $users[] = User::create([
+            $users[] = User::forceCreate([
                 'name'     => "Khách Hàng $i",
                 'email'    => "khachhang$i@gmail.com",
                 'password' => Hash::make('password'),
