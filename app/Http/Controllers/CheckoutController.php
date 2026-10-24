@@ -2,57 +2,48 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ShopException;
+use App\Models\Product;
+use App\Services\CartService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
-    // 1. Hiển thị trang thanh toán
-    public function index()
+    public function __construct(private CartService $cart)
     {
-        $cart = session()->get('cart', []);
-
-        if (empty($cart)) {
-            return redirect()->route('cart.index')->with('error', 'Giỏ hàng của bạn đang trống!');
-        }
-
-        // Tạm tính tiền hàng
-        $totalPrice = array_reduce($cart, function ($total, $item) {
-            return $total + ($item['price'] * $item['quantity']);
-        }, 0);
-
-        // Lấy thông tin Voucher từ Session
-        $voucher = session()->get('voucher');
-        $discount = 0;
-
-        if ($voucher) {
-            if ($voucher['type'] === 'percent') {
-                $discount = ($totalPrice * $voucher['value']) / 100;
-            } elseif ($voucher['type'] === 'fixed') {
-                $discount = $voucher['value'];
-            }
-            $discount = min($discount, $totalPrice);
-        }
-
-        // Tổng tiền cần thanh toán thực tế
-        $finalTotal = max(0, $totalPrice - $discount);
-
-        return view('client.checkout', compact('cart', 'totalPrice', 'discount', 'finalTotal', 'voucher'));
     }
 
-    // 2. Xử lý lưu đơn hàng & trừ tồn kho
-    public function process(Request $request)
+    /** 1. Trang thanh toán */
+    public function index()
     {
-        $cart = session()->get('cart', []);
+        $summary = $this->cart->summary();
 
-        if (empty($cart)) {
+        if (empty($summary['items'])) {
             return redirect()->route('cart.index')->with('error', 'Giỏ hàng của bạn đang trống!');
         }
 
-        $request->validate([
+        if ($summary['notices']) {
+            session()->now('error', implode(' ', $summary['notices']));
+        }
+
+        return view('client.checkout', [
+            'cart'       => $summary['items'],
+            'totalPrice' => $summary['subtotal'],
+            'discount'   => $summary['discount'],
+            'finalTotal' => $summary['total'],
+            'voucher'    => $summary['voucher'],
+        ]);
+    }
+
+    /** 2. Tạo đơn hàng: kiểm tra lại giá/tồn kho/voucher trong transaction, trừ kho. */
+    public function process(Request $request)
+    {
+        $data = $request->validate([
             'fullname'       => 'required|string|max:255',
-            'phone'          => 'required|string|max:20',
+            'phone'          => ['required', 'string', 'max:20', 'regex:/^[0-9+\-\s().]{8,20}$/'],
             'email'          => 'nullable|email|max:255',
             'address'        => 'required|string|max:500',
             'payment_method' => 'required|in:cod,bank',
@@ -60,106 +51,184 @@ class CheckoutController extends Controller
         ], [
             'fullname.required'       => 'Vui lòng nhập họ tên người nhận',
             'phone.required'          => 'Vui lòng nhập số điện thoại',
+            'phone.regex'             => 'Số điện thoại không hợp lệ',
             'address.required'        => 'Vui lòng nhập địa chỉ nhận hàng',
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán',
         ]);
 
-        // Tính toán lại giá trị đơn hàng
-        $totalPrice = array_reduce($cart, function ($total, $item) {
-            return $total + ($item['price'] * $item['quantity']);
-        }, 0);
+        // Đồng bộ giỏ với DB. Nếu có gì thay đổi (giá, tồn kho, voucher) thì dừng lại để khách xem lại,
+        // tuyệt đối không âm thầm tính tiền khác với những gì khách đã thấy.
+        $summary = $this->cart->summary();
 
-        $voucher = session()->get('voucher');
-        $discount = 0;
-
-        if ($voucher) {
-            if ($voucher['type'] === 'percent') {
-                $discount = ($totalPrice * $voucher['value']) / 100;
-            } elseif ($voucher['type'] === 'fixed') {
-                $discount = $voucher['value'];
-            }
-            $discount = min($discount, $totalPrice);
+        if (empty($summary['items'])) {
+            return redirect()->route('cart.index')->with('error', 'Giỏ hàng của bạn đang trống!');
         }
 
-        $finalTotal = max(0, $totalPrice - $discount);
+        if ($summary['notices']) {
+            return redirect()->route('checkout.index')
+                ->withInput()
+                ->with('error', 'Giỏ hàng vừa được cập nhật: ' . implode(' ', $summary['notices']) . ' Vui lòng kiểm tra lại rồi đặt hàng.');
+        }
 
-        DB::beginTransaction();
         try {
-            // --- BƯỚC 1: KIỂM TRA TỒN KHO TRƯỚC KHI TẠO ĐƠN ---
-            // (Lưu ý: Thay 'quantity' thành 'stock' nếu tên cột trong bảng products của bro là stock)
-            foreach ($cart as $productId => $item) {
-                $product = DB::table('products')->where('id', $productId)->lockForUpdate()->first();
+            $orderId = DB::transaction(fn () => $this->createOrder($data, $summary['items']), 3);
+        } catch (ShopException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            report($e); // chi tiết đầy đủ nằm trong storage/logs/laravel.log
 
-                if (!$product) {
-                    throw new \Exception("Sản phẩm '{$item['name']}' không còn tồn tại!");
-                }
-
-                // Giả sử tên cột số lượng tồn kho trong bảng products là 'quantity'
-                if ($product->quantity < $item['quantity']) {
-                    throw new \Exception("Sản phẩm '{$item['name']}' chỉ còn {$product->quantity} sản phẩm trong kho, không đủ số lượng bạn đặt!");
-                }
+            $message = 'Không thể đặt hàng lúc này, vui lòng thử lại sau.';
+            if (config('app.debug')) {
+                // Chỉ hiện khi APP_DEBUG=true (môi trường phát triển) để dễ tìm nguyên nhân
+                $message .= ' [Chi tiết: ' . $e->getMessage() . ']';
             }
 
-            // --- BƯỚC 2: TẠO MÃ & LƯU ĐƠN HÀNG ---
-            $orderCode = 'ORD-' . strtoupper(Str::random(8));
-
-            $orderId = DB::table('orders')->insertGetId([
-                'order_code'       => $orderCode,
-                'user_id'          => auth()->id() ?? null,
-                'recipient_name'   => $request->fullname,
-                'recipient_phone'  => $request->phone,
-                'shipping_address' => $request->address,
-                'note'             => $request->note,
-                'total_amount'     => $finalTotal,
-                'payment_method'   => strtoupper($request->payment_method),
-                'payment_status'   => 'unpaid',
-                'order_status'     => 'pending',
-                'created_at'       => now(),
-                'updated_at'       => now(),
-            ]);
-
-            // --- BƯỚC 3: LƯU CHI TIẾT ĐƠN HÀNG & TRỪ SỐ LƯỢNG TỒN KHO ---
-            foreach ($cart as $productId => $item) {
-                // 3.1. Lưu order_items
-                DB::table('order_items')->insert([
-                    'order_id'     => $orderId,
-                    'product_id'   => $productId,
-                    'product_name' => $item['name'] ?? 'Sản phẩm',
-                    'price'        => $item['price'],
-                    'quantity'     => $item['quantity'],
-                    'created_at'   => now(),
-                    'updated_at'   => now(),
-                ]);
-
-                // 3.2. Trừ tồn kho trong bảng products
-                DB::table('products')
-                    ->where('id', $productId)
-                    ->decrement('quantity', $item['quantity']); // Thay 'quantity' thành tên cột tồn kho của bro nếu khác
-            }
-
-            DB::commit();
-
-            // Xóa Giỏ hàng & Voucher sau khi hoàn tất
-            session()->forget(['cart', 'voucher']);
-
-            return redirect()->route('checkout.success', $orderId)
-                            ->with('success', 'Đặt hàng thành công!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Đặt hàng thất bại: ' . $e->getMessage())->withInput();
+            return back()->withInput()->with('error', $message);
         }
+
+        $this->cart->clear();
+
+        // Cho phép chính khách này (kể cả khách vãng lai) xem trang cảm ơn của đơn vừa đặt.
+        session(['last_order_id' => $orderId]);
+
+        return redirect()->route('checkout.success', $orderId)->with('success', 'Đặt hàng thành công!');
     }
 
-    // 3. Trang đặt hàng thành công
+    /** 3. Trang đặt hàng thành công: chỉ chủ đơn (hoặc phiên vừa đặt, hoặc admin) mới xem được. */
     public function success($orderId)
     {
         $order = DB::table('orders')->where('id', $orderId)->first();
 
-        if (!$order) {
-            return redirect()->route('cart.index');
-        }
+        // Trả 404 thay vì 403 để không lộ việc đơn hàng đó có tồn tại hay không.
+        abort_unless($order && $this->canViewOrder($order), 404);
 
         return view('client.checkout-success', compact('order'));
+    }
+
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Chạy bên trong DB::transaction.
+     *
+     * @throws ShopException
+     */
+    private function createOrder(array $data, array $items): int
+    {
+        // Khoá các dòng sản phẩm theo thứ tự id để tránh deadlock khi nhiều khách đặt cùng lúc.
+        $products = DB::table('products')
+            ->whereIn('id', array_keys($items))
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('id');
+
+        $lines    = [];
+        $subtotal = 0;
+
+        foreach ($items as $id => $item) {
+            $product  = $products->get($id);
+            $quantity = (int) $item['quantity'];
+
+            if (!$product || !$product->status) {
+                throw new ShopException("Sản phẩm '{$item['name']}' không còn được bán!");
+            }
+
+            if ($product->quantity < $quantity) {
+                throw new ShopException("Sản phẩm '{$product->name}' chỉ còn {$product->quantity} sản phẩm trong kho, không đủ số lượng bạn đặt!");
+            }
+
+            // Giá luôn lấy từ DB tại thời điểm đặt hàng, không tin dữ liệu trong session.
+            $price     = Product::resolvePrice($product->price, $product->sale_price);
+            $subtotal += $price * $quantity;
+
+            $lines[] = [
+                'product_id' => $product->id,
+                'name'       => $product->name,
+                'price'      => $price,
+                'quantity'   => $quantity,
+            ];
+        }
+
+        $resolved = $this->cart->resolveVoucher($subtotal);
+
+        if ($resolved['notice']) {
+            throw new ShopException($resolved['notice'] . ' Vui lòng kiểm tra lại giỏ hàng.');
+        }
+
+        $discount = $resolved['discount'];
+        $total    = max(0, $subtotal - $discount);
+
+        $order = [
+            'order_code'       => $this->generateOrderCode(),
+            'user_id'          => auth()->id(),
+            'recipient_name'   => $data['fullname'],
+            'recipient_phone'  => $data['phone'],
+            'shipping_address' => $data['address'],
+            'note'             => $data['note'] ?? null,
+            'sub_total'        => $subtotal,
+            'discount'         => $discount,
+            'voucher_code'     => $resolved['voucher']['code'] ?? null,
+            'total_amount'     => $total,
+            'payment_method'   => strtoupper($data['payment_method']),
+            'payment_status'   => 'unpaid',
+            'order_status'     => 'pending',
+            'created_at'       => now(),
+            'updated_at'       => now(),
+        ];
+
+        // Cột email do migration mới thêm vào: nếu DB chưa chạy `php artisan migrate` thì bỏ qua
+        // để việc đặt hàng vẫn hoạt động (email chỉ được lưu khi cột đã tồn tại).
+        if (Schema::hasColumn('orders', 'email')) {
+            $order['email'] = $data['email'] ?? null;
+        }
+
+        $orderId = DB::table('orders')->insertGetId($order);
+
+        foreach ($lines as $line) {
+            DB::table('order_items')->insert([
+                'order_id'     => $orderId,
+                'product_id'   => $line['product_id'],
+                'product_name' => $line['name'],
+                'price'        => $line['price'],
+                'quantity'     => $line['quantity'],
+                'created_at'   => now(),
+                'updated_at'   => now(),
+            ]);
+
+            $updated = DB::table('products')
+                ->where('id', $line['product_id'])
+                ->where('quantity', '>=', $line['quantity'])
+                ->decrement('quantity', $line['quantity']);
+
+            if (!$updated) {
+                throw new ShopException("Sản phẩm '{$line['name']}' vừa hết hàng, vui lòng thử lại!");
+            }
+        }
+
+        return (int) $orderId;
+    }
+
+    private function generateOrderCode(): string
+    {
+        do {
+            $code = 'ORD-' . strtoupper(Str::random(8));
+        } while (DB::table('orders')->where('order_code', $code)->exists());
+
+        return $code;
+    }
+
+    private function canViewOrder(object $order): bool
+    {
+        if ((int) session('last_order_id') === (int) $order->id) {
+            return true;
+        }
+
+        $user = auth()->user();
+
+        if (!$user) {
+            return false;
+        }
+
+        return $user->isAdmin() || ($order->user_id !== null && (int) $order->user_id === (int) $user->id);
     }
 }

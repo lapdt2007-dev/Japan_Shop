@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Category;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 
@@ -28,6 +29,11 @@ class AppServiceProvider extends ServiceProvider
         View::composer('*', function ($view) {
             $cartCount = array_sum(array_column(session('cart', []), 'quantity'));
             $view->with('cartCount', $cartCount);
+        });
+
+        // dùng ở menu "Danh mục" trên header và cột "Danh Mục" ở footer
+        View::composer('layouts.app', function ($view) {
+            $view->with('navCategories', Category::orderBy('id')->get());
         });
     }
 }

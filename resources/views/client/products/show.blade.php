@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="{{ asset('css/sidebar-layout.css') }}">
 
     <style>
-.star-rating i { cursor: pointer; transition: color 0.2s; }
+        .star-rating i { cursor: pointer; transition: color 0.2s; }
 
         .main-product-img {
             width: 100%;
@@ -72,26 +72,7 @@
 <body class="bg-light">
 
     <!-- ============ SIDEBAR TRÁI ============ -->
-    <aside class="side-nav d-flex flex-column">
-        <a href="{{ route('home') }}">
-            <i class="fa-solid fa-house"></i> Trang chủ
-        </a>
-        <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-bag-shopping"></i> Mua
-        </a>
-        <a href="{{ route('orders.index') }}" class="{{ request()->routeIs('orders.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-box-open"></i> Hàng hóa
-        </a>
-        <a href="{{ route('about.index') }}">
-            <i class="fa-solid fa-circle-info"></i> Giới thiệu
-        </a>
-        <a href="{{ route('home') }}#footer-info">
-            <i class="fa-solid fa-earth-asia"></i> Quốc tế
-        </a>
-        <a href="{{ route('home') }}#footer-info">
-            <i class="fa-solid fa-comment-dots"></i> Phản hồi
-        </a>
-    </aside>
+    @include('layouts.sidebar')
 
     <!-- ============ NỘI DUNG CHÍNH ============ -->
     <div class="main-wrapper">
@@ -124,6 +105,11 @@
         </nav>
 
         <!-- Thông báo -->
+        @if(session('error') || session('warning') || $errors->any())
+            <div class="container mt-4">
+                @include('partials.flash-errors')
+            </div>
+        @endif
         @if(session('success'))
             <div class="container mt-4">
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -266,6 +252,7 @@
                 <h5 class="fw-bold mb-4">Đánh giá cho sản phẩm này ({{ number_format($reviewCount) }})</h5>
 
                 @auth
+                  @if($canReview)
                     <form action="{{ route('product.review', $product->id) }}" method="POST" class="mb-4">
                         @csrf
                         <div class="mb-3">
@@ -287,6 +274,11 @@
                         </div>
                         <button type="submit" class="btn btn-danger px-4 fw-semibold">Gửi đánh giá</button>
                     </form>
+                  @else
+                    <div class="alert alert-info">
+                        <i class="fa-solid fa-circle-info me-1"></i>Bạn có thể đánh giá sản phẩm này sau khi đơn hàng đã được giao thành công.
+                    </div>
+                  @endif
                 @else
                     <div class="alert alert-warning">
                         Vui lòng <a href="{{ route('login') }}" class="fw-bold text-danger">đăng nhập</a> để tham gia đánh giá sản phẩm này nhé.
@@ -296,7 +288,7 @@
                 <hr>
 
                 <div class="review-list">
-                    @forelse($product->reviews()->latest()->get() as $review)
+                    @forelse($product->reviews->sortByDesc('created_at') as $review)
                         <div class="card bg-light border-0 mb-3 p-3">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <strong class="text-dark"><i class="fa-solid fa-circle-user me-1 text-secondary"></i> {{ $review->user->name ?? 'Người dùng ẩn danh' }}</strong>
@@ -327,6 +319,7 @@
                 </div>
             @endif
         </div>
+        @include('layouts.footer')
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

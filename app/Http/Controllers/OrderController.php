@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Review;
+use App\Exceptions\ShopException;
+use App\Services\OrderService;
 
 class OrderController extends Controller
 {
@@ -41,7 +43,7 @@ class OrderController extends Controller
 
         // ===== Bộ lọc tìm kiếm nâng cao =====
         if ($request->filled('keyword')) {
-            $keyword = $request->keyword;
+            $keyword = addcslashes((string) $request->keyword, '%_\\');
             $query->where(function ($q) use ($keyword) {
                 $q->where('order_code', 'like', '%' . $keyword . '%')
                   ->orWhereHas('items.product', function ($q2) use ($keyword) {
@@ -58,8 +60,9 @@ class OrderController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
+        // Giá trị lưu trong DB là 'COD' | 'BANK' (chữ hoa), form gửi lên 'cod' | 'bank'
         if ($request->filled('payment_method') && $request->payment_method !== 'all') {
-            $query->where('payment_method', $request->payment_method);
+            $query->where('payment_method', strtoupper($request->payment_method));
         }
 
         if ($request->filled('status') && $request->status !== 'all') {
@@ -89,5 +92,20 @@ class OrderController extends Controller
         }
 
         return view('client.orders.index', compact('orders', 'tab', 'reviewedProductIds'));
+    }
+
+        // Khách tự hủy đơn của mình
+    public function cancel(Order $order, OrderService $orders)
+    {
+        // Trả 404 nếu không phải đơn của người này (không lộ việc đơn có tồn tại)
+        abort_unless((int) $order->user_id === (int) auth()->id(), 404);
+
+        try {
+            $orders->cancelByCustomer($order->id, (int) auth()->id());
+        } catch (ShopException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Đã hủy đơn hàng #' . ($order->order_code ?? $order->id) . '.');
     }
 }

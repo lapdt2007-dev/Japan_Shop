@@ -1,0 +1,17 @@
+        .about-banner {
+            background: #fff;
+            border-radius: 16px;
+        }
+
+        .feature-icon {
+            width: 64px; height: 64px;
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            background: #fff5f4;
+            font-size: 1.6rem;
+            color: var(--brand);
+            margin: 0 auto 12px;
+        }
+
+        .feature-box { transition: transform 0.2s ease; }
+        .feature-box:hover { transform: translateY(-4px); }

@@ -10,6 +10,7 @@
 <div class="container bg-white p-4 rounded-3 shadow-sm" style="max-width: 650px;">
     <h3 class="fw-bold text-warning mb-4">✏️ Chỉnh Sửa Sản Phẩm #{{ $product->id }}</h3>
 
+    @include('partials.flash-errors')
     <form action="{{ route('admin.products.update', $product->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
@@ -71,6 +72,26 @@
                 <div class="mt-2">
                     <img src="{{ asset('storage/' . $product->thumbnail) }}" width="60" class="rounded border">
                     <small class="text-muted d-block">Ảnh hiện tại</small>
+                </div>
+            @endif
+        </div>
+
+                <!-- Ảnh phụ -->
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Thêm ảnh phụ (tối đa 8 ảnh)</label>
+            <input type="file" name="images[]" class="form-control" accept="image/*" multiple>
+
+            @if($product->images->count())
+                <div class="d-flex flex-wrap gap-3 mt-3">
+                    @foreach($product->images as $img)
+                        @php
+                            $src = filter_var($img->image_path, FILTER_VALIDATE_URL) ? $img->image_path : asset('storage/' . $img->image_path);
+                        @endphp
+                        <label class="text-center small" style="cursor:pointer;">
+                            <img src="{{ $src }}" width="80" height="80" class="rounded border d-block mb-1" style="object-fit:cover;">
+                            <input type="checkbox" name="delete_images[]" value="{{ $img->id }}"> Xóa
+                        </label>
+                    @endforeach
                 </div>
             @endif
         </div>

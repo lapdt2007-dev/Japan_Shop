@@ -1,109 +1,53 @@
-# Japan Shop - Website Bán Hàng Nhật Bản (Nhóm 5)
+# Japan Shop
 
-<p align="center">
-  <a href="https://laravel.com" target="_blank">
-    <img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="350" alt="Laravel Logo">
-  </a>
-</p>
+Cửa hàng bán hàng Nhật (Laravel 9, Blade + Bootstrap).
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Framework">
-  <img src="https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP">
-  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL">
-  <img src="https://img.shields.io/badge/Team-Group%205-blue?style=for-the-badge" alt="Nhóm 5">
-</p>
+## Cài đặt
 
----
+```bash
+composer install
+cp .env.example .env          # rồi chỉnh DB_* cho đúng máy bạn
+php artisan key:generate
+php artisan migrate           # BẮT BUỘC sau khi cập nhật: có 2 migration mới (orders.email, feedbacks)
+php artisan db:seed           # (tuỳ chọn) dữ liệu mẫu — CHỈ dùng khi phát triển
+php artisan storage:link
+php artisan serve
+```
 
-## 🌸 Giới thiệu về dự án (About Japan Shop)
+Tài khoản mẫu từ seeder: xem `database/seeders/DatabaseSeeder.php`.
+**Đổi mật khẩu admin trước khi đưa lên production**, và đặt `APP_DEBUG=false`.
 
-**Japan Shop** là dự án thương mại điện tử chuyên cung cấp các sản phẩm nội địa Nhật Bản chất lượng cao (mỹ phẩm, thực phẩm chức năng, đồ gia dụng, thời trang,...). Dự án được phát triển bởi **Nhóm 5** trên nền tảng **Laravel Framework**, hướng tới việc mang đến trải nghiệm mua sắm nhanh chóng, an toàn và tiện lợi cho người dùng.
+## Chạy test
 
-### Các tính năng chính (Features)
+```bash
+php artisan test
+```
 
-- **Giao diện người dùng (Customer Front-end):**
-  - Danh mục sản phẩm chuẩn Nhật Bản, tìm kiếm & bộ lọc thông minh.
-  - Quản lý giỏ hàng, giỏ hàng tạm lưu và thanh toán trực tuyến.
-  - Đăng ký / Đăng nhập tài khoản và lịch sử đơn hàng.
-  - Đánh giá và bình luận sản phẩm.
+Test dùng SQLite in-memory (cấu hình trong `phpunit.xml`) nên **không bao giờ đụng vào database thật**.
+Cần bật extension `pdo_sqlite` trong `php.ini`.
 
-- **Hệ thống quản trị (Admin Dashboard):**
-  - Quản lý sản phẩm và kho hàng.
-  - Quản lý đơn hàng, cập nhật trạng thái giao hàng.
-  - Thống kê doanh thu, báo cáo chi tiết.
+## Kiến trúc chính
 
----
+| Thành phần | Vai trò |
+|---|---|
+| `app/Services/CartService.php` | Toàn bộ logic giỏ hàng: tồn kho, giá, đồng bộ với DB, voucher |
+| `config/vouchers.php` | Danh sách mã giảm giá |
+| `app/Exceptions/ShopException.php` | Lỗi nghiệp vụ có thông điệp hiển thị trực tiếp cho khách |
+| `Product::scopeActive / scopeFilter` | Lọc sản phẩm dùng chung cho trang chủ, hàng hoá, quốc tế |
 
-## 🚀 Hướng dẫn cài đặt (Installation Guide)
+## Quy tắc nghiệp vụ
 
-Để chạy dự án ở môi trường Local, vui lòng thực hiện các bước sau:
+- Giá, tồn kho và điều kiện voucher luôn được kiểm tra lại với DB khi xem giỏ và khi đặt hàng; không tin dữ liệu trong session.
+- Nếu giỏ hàng thay đổi (đổi giá, hết hàng, voucher không còn hợp lệ) thì đơn **không** được tạo ngầm — khách được báo và xem lại.
+- Đơn hàng đã hủy là trạng thái cuối (tồn kho đã hoàn đúng 1 lần); đơn đã hoàn thành không thể hủy.
+- Chỉ khách có đơn **completed** chứa sản phẩm mới được đánh giá; mỗi người 1 đánh giá / sản phẩm.
+- Trang `/checkout/success/{id}` chỉ chủ đơn (hoặc phiên vừa đặt, hoặc admin) xem được.
 
-1. **Clone repository về máy:**
-   ```bash
-   git clone: ----updating-----
-   cd japan-shop
-   ```
+## Xử lý sự cố thường gặp
 
-2. **Cài đặt các thư viện PHP (Composer dependencies):**
-   ```bash
-   composer install
-   ```
-
-3. **Tạo file cấu hình môi trường `.env`:**
-   ```bash
-   cp .env.example .env
-   ```
-
-4. **Tạo mã khóa ứng dụng (Application Key):**
-   ```bash
-   php artisan key:generate
-   ```
-
-5. **Cấu hình Cơ sở dữ liệu:**
-   Mở file `.env` và cập nhật các thông tin kết nối Database của bạn:
-   ```env
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=japan_shop
-   DB_USERNAME=root
-   DB_PASSWORD=
-   ```
-
-6. **Chạy Migration và Seed dữ liệu mẫu:**
-   ```bash
-   php artisan migrate --seed
-   ```
-
-7. **Khởi chạy máy chủ phát triển (Local Server):**
-   ```bash
-   php artisan serve
-   ```
-   Sau đó truy cập ứng dụng tại: `http://127.0.0.1:8000`
-
----
-
-## 👥 Thành viên thực hiện (Group 5 Members)
-
-Dự án được xây dựng và phát triển bởi các thành viên **Nhóm 5**:
-
-| STT | Họ và Tên | Vai trò / Nhiệm vụ | GitHub |
-| :---: | :--- | :--- | :---: |
-| 1 | Đinh Thành Lập | Leader / Backend Developer | https://github.com/lapdt2007-dev |
-| 2 | Trần Tấn Đạt | Frontend Developer / UI-UX | https://github.com/datstyle  |
-| 3 | Lê Nguyễn An Trường| Backend Developer / Database | https://github.com/antruong31|
-
----
-
-## 🛠 Công nghệ sử dụng (Tech Stack)
-
-- **Backend:** [PHP > 8.x](https://www.php.net/), [Laravel Framework](https://laravel.com)
-- **Database:** [MySQL](https://www.mysql.com/)
-- **Frontend:** HTML5, CSS3, JavaScript,note.js, typescript, Bootstrap / Tailwind CSS, Blade Template Engine
-- **Tools:** Git, GitHub, Composer, VS Code
-
----
-
-## 📄 Giấy phép (License)
-
-Dự án này được phát triển cho mục đích học tập và nghiên cứu. Sử dụng mã nguồn mở theo [MIT license](https://opensource.org/licenses/MIT).
+| Hiện tượng | Nguyên nhân thường gặp | Cách xử lý |
+|---|---|---|
+| Đặt hàng báo "Không thể đặt hàng lúc này" | Chưa chạy migration mới, hoặc lỗi DB khác | `php artisan migrate`; mở `storage/logs/laravel.log` xem dòng lỗi cuối. Khi `APP_DEBUG=true`, chi tiết lỗi hiện ngay trên thông báo |
+| Tải ảnh sản phẩm báo lỗi | Ảnh > 2MB hoặc vượt `upload_max_filesize`/`post_max_size` của PHP; thư mục `storage` không có quyền ghi | Dùng ảnh nhỏ hơn / tăng giới hạn trong `php.ini` rồi restart Apache; cấp quyền ghi cho `storage` |
+| Tải ảnh lên được nhưng không hiện ảnh | `public/storage` chưa là liên kết tới `storage/app/public` (hoặc là thư mục thật) | Xoá thư mục `public/storage` nếu nó là thư mục thật, rồi `php artisan storage:link` |
+| Sau khi cập nhật code, trang lạ/lỗi lạ | Cache cũ | `php artisan optimize:clear` và `composer dump-autoload` |

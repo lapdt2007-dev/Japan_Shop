@@ -1,36 +1,55 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title', config('app.name', 'Japan Shop'))</title>
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ asset('css/sidebar-layout.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/client-layout.css') }}">
 
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100">
-            @include('layouts.navigation')
+    @isset($slot)
 
-            <!-- Page Heading -->
-            @if (isset($header))
-                <header class="bg-white shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
-                    </div>
-                </header>
-            @endif
+        <script src="https://cdn.tailwindcss.com/3.4.17?plugins=forms"></script>
+        <script>tailwind.config = { corePlugins: { preflight: false } }</script>
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    @endisset
 
-            <!-- Page Content -->
-            <main>
+    @stack('styles')
+</head>
+<body>
+
+    @include('layouts.sidebar')
+
+    <div class="main-wrapper">
+
+        {{-- layouts/navigation.blade.php (bên trong gọi tiếp layouts/header.blade.php) --}}
+        @include('layouts.navigation')
+
+        @isset($header)
+            <div class="bg-white border-bottom">
+                <div class="container-fluid px-3 px-lg-4 py-3">{{ $header }}</div>
+            </div>
+        @endisset
+
+        <main>
+            @isset($slot)
                 {{ $slot }}
-            </main>
-        </div>
-    </body>
+            @else
+                @yield('content')
+            @endisset
+        </main>
+
+        @include('layouts.footer')
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    @includeIf('partials.chatbox')
+    @stack('scripts')
+</body>
 </html>

@@ -2,32 +2,41 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ShopException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class AdminOrderController extends Controller
 {
-    // 1. Danh sách đơn hàng (Có bộ lọc & phân trang)
+    public const ORDER_STATUSES   = ['pending', 'processing', 'shipping', 'completed', 'cancelled'];
+    public const PAYMENT_STATUSES = ['unpaid', 'paid'];
+
+    // 1. Danh sách đơn hàng (có bộ lọc & phân trang)
     public function index(Request $request)
     {
-        $query = DB::table('orders')->orderBy('created_at', 'desc');
+        $filters = $request->validate([
+            'status'  => ['nullable', Rule::in(self::ORDER_STATUSES)],
+            'keyword' => 'nullable|string|max:100',
+        ]);
 
-        // Lọc theo trạng thái đơn hàng
-        if ($request->has('status') && $request->status != '') {
-            $query->where('order_status', $request->status);
+        $query = DB::table('orders')->orderByDesc('created_at')->orderByDesc('id');
+
+        if (!empty($filters['status'])) {
+            $query->where('order_status', $filters['status']);
         }
 
-        // Tìm kiếm theo Mã đơn hàng / Tên / SĐT
-        if ($request->has('keyword') && $request->keyword != '') {
-            $keyword = trim($request->keyword);
-            $query->where(function($q) use ($keyword) {
-                $q->where('order_code', 'like', "%{$keyword}%")
-                  ->orWhere('recipient_name', 'like', "%{$keyword}%")
-                  ->orWhere('recipient_phone', 'like', "%{$keyword}%");
+        if (!empty($filters['keyword'])) {
+            $like = '%' . addcslashes(trim($filters['keyword']), '%_\\') . '%';
+
+            $query->where(function ($q) use ($like) {
+                $q->where('order_code', 'like', $like)
+                  ->orWhere('recipient_name', 'like', $like)
+                  ->orWhere('recipient_phone', 'like', $like);
             });
         }
 
-        $orders = $query->paginate(10);
+        $orders = $query->paginate(10)->withQueryString();
 
         return view('admin.orders.index', compact('orders'));
     }
@@ -41,50 +50,63 @@ class AdminOrderController extends Controller
             return redirect()->route('admin.orders.index')->with('error', 'Không tìm thấy đơn hàng!');
         }
 
-        // Lấy danh sách sản phẩm trong đơn hàng
-        $orderItems = DB::table('order_items')
-            ->where('order_id', $id)
-            ->get();
+        $orderItems = DB::table('order_items')->where('order_id', $id)->get();
 
         return view('admin.orders.show', compact('order', 'orderItems'));
     }
 
-    // 3. Cập nhật trạng thái đơn hàng & Thanh toán
-   public function updateStatus(Request $request, $id)
-{
-    $order = DB::table('orders')->where('id', $id)->first();
+    // 3. Cập nhật trạng thái đơn hàng & thanh toán
+    public function updateStatus(Request $request, $id)
+    {
+        $data = $request->validate([
+            'order_status'   => ['required', Rule::in(self::ORDER_STATUSES)],
+            'payment_status' => ['required', Rule::in(self::PAYMENT_STATUSES)],
+        ]);
 
-    if (!$order) {
-        return redirect()->back()->with('error', 'Không tìm thấy đơn hàng!');
-    }
+        try {
+            DB::transaction(function () use ($data, $id) {
+                // Khoá đơn để 2 admin bấm cùng lúc không thể hoàn kho 2 lần.
+                $order = DB::table('orders')->where('id', $id)->lockForUpdate()->first();
 
-    try {
-        DB::transaction(function () use ($request, $id, $order) {
-            // Nếu đơn hàng chuyển sang trạng thái "cancelled" (Hủy) và trước đó chưa bị hủy
-            if ($request->order_status === 'cancelled' && $order->order_status !== 'cancelled') {
-                $orderItems = DB::table('order_items')->where('order_id', $id)->get();
-
-                foreach ($orderItems as $item) {
-                    // Cộng trả lại số lượng vào kho
-                    DB::table('products')
-                        ->where('id', $item->product_id)
-                        ->increment('quantity', $item->quantity);
+                if (!$order) {
+                    throw new ShopException('Không tìm thấy đơn hàng!');
                 }
-            }
 
-            // Cập nhật trạng thái mới
-            DB::table('orders')->where('id', $id)->update([
-                'order_status'   => $request->order_status,
-                'payment_status' => $request->payment_status,
-                'updated_at'     => now(),
-            ]);
-        });
+                $old = $order->order_status;
+                $new = $data['order_status'];
 
-        return redirect()->back()->with('success', 'Cập nhật trạng thái thành công!');
-    } catch (\Exception $e) {
-        return redirect()->back()->with('error', 'Cập nhật thất bại: ' . $e->getMessage());
+                // Đơn đã hủy là trạng thái cuối: kho đã được hoàn, mở lại sẽ làm lệch tồn kho.
+                if ($old === 'cancelled' && $new !== 'cancelled') {
+                    throw new ShopException('Đơn hàng đã hủy nên không thể mở lại. Hãy để khách đặt đơn mới.');
+                }
+
+                if ($old === 'completed' && $new === 'cancelled') {
+                    throw new ShopException('Đơn hàng đã hoàn thành nên không thể hủy.');
+                }
+
+                // Chuyển sang "cancelled" lần đầu -> hoàn lại tồn kho đúng 1 lần.
+                if ($new === 'cancelled' && $old !== 'cancelled') {
+                    $items = DB::table('order_items')->where('order_id', $id)->get();
+
+                    foreach ($items as $item) {
+                        if ($item->product_id) {
+                            DB::table('products')
+                                ->where('id', $item->product_id)
+                                ->increment('quantity', $item->quantity);
+                        }
+                    }
+                }
+
+                DB::table('orders')->where('id', $id)->update([
+                    'order_status'   => $new,
+                    'payment_status' => $data['payment_status'],
+                    'updated_at'     => now(),
+                ]);
+            });
+        } catch (ShopException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Cập nhật trạng thái thành công!');
     }
-}
-
-    
 }

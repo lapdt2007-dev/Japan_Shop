@@ -3,122 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản Lý Đơn Hàng - Admin</title>
+    <title>Quản lý đơn hàng - Kênh người bán</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/admin-orders.css') }}">
 </head>
-<body class="bg-light">
+<body>
 
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="fw-bold text-dark mb-0"><i class="fa-solid fa-boxes-packing text-primary me-2"></i>Quản Lý Đơn Hàng</h3>
-        <a href="/" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-house me-1"></i> Xem Website</a>
-    </div>
+@php
+    $tabs = [
+        ''           => 'Tất cả',
+        'pending'    => 'Chờ xử lý',
+        'processing' => 'Đang xử lý',
+        'shipping'   => 'Đang giao',
+        'completed'  => 'Hoàn thành',
+        'cancelled'  => 'Đã hủy',
+    ];
+    $statusLabel = [
+        'pending'    => 'Chờ xử lý',
+        'processing' => 'Đang xử lý',
+        'shipping'   => 'Đang giao',
+        'completed'  => 'Hoàn thành',
+        'cancelled'  => 'Đã hủy',
+    ];
+    $counts   = isset($statusCounts) ? collect($statusCounts) : collect();
+    $current  = request('status', '');
+    $keyword  = request('keyword', '');
+    $pending  = $counts->isNotEmpty() ? (int) $counts->get('pending', 0) : null;
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fa-solid fa-circle-check me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+    // Chuẩn bị phân trang (giữ từ khóa và tab khi chuyển trang)
+    $orders->withQueryString();
+    $cur  = $orders->currentPage();
+    $last = $orders->lastPage();
+    $from = max(1, $cur - 2);
+    $to   = min($last, $cur + 2);
+@endphp
 
-    <!-- BỘ LỌC VÀ TÌM KIẾM -->
-    <div class="card border-0 shadow-sm rounded-3 p-3 mb-4">
-        <form action="{{ route('admin.orders.index') }}" method="GET" class="row g-2">
-            <div class="col-md-5">
-                <input type="text" name="keyword" class="form-control" placeholder="Tìm theo Mã đơn, Tên người nhận, SĐT..." value="{{ request('keyword') }}">
-            </div>
-            <div class="col-md-4">
-                <select name="status" class="form-select">
-                    <option value="">-- Tất cả trạng thái đơn --</option>
-                    <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ xử lý (Pending)</option>
-                    <option value="processing" {{ request('status') == 'processing' ? 'selected' : '' }}>Đang xử lý (Processing)</option>
-                    <option value="shipping" {{ request('status') == 'shipping' ? 'selected' : '' }}>Đang giao (Shipping)</option>
-                    <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Hoàn thành (Completed)</option>
-                    <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Đã hủy (Cancelled)</option>
-                </select>
-            </div>
-            <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-primary w-100 fw-semibold"><i class="fa-solid fa-filter me-1"></i> Lọc</button>
-                <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-secondary"><i class="fa-solid fa-rotate-right"></i></a>
-            </div>
+<header class="topbar">
+    <div class="topbar-inner">
+        <a href="{{ route('admin.orders.index') }}" class="brand">Japan Shop</a>
+
+        <form class="search-box" action="{{ route('admin.orders.index') }}" method="GET" role="search">
+            @if($current !== '')
+                <input type="hidden" name="status" value="{{ $current }}">
+            @endif
+            <input type="text" name="keyword" value="{{ $keyword }}" placeholder="Tìm theo mã đơn, tên người nhận, số điện thoại" aria-label="Tìm đơn hàng">
+            <button type="submit">Tìm kiếm</button>
         </form>
-    </div>
 
-    <!-- BẢNG DANH SÁCH ĐƠN HÀNG -->
-    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Mã Đơn</th>
-                        <th>Khách Hàng</th>
-                        <th>SĐT</th>
-                        <th>Phương Thức</th>
-                        <th>Tổng Tiền</th>
-                        <th>Thanh Toán</th>
-                        <th>Trạng Thái</th>
-                        <th>Ngày Đặt</th>
-                        <th class="text-center">Thao Tác</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($orders as $item)
-                        <tr>
-                            <td class="fw-bold text-primary">#{{ $item->order_code }}</td>
-                            <td class="fw-semibold">{{ $item->recipient_name }}</td>
-                            <td>{{ $item->recipient_phone }}</td>
-                            <td><span class="badge bg-light text-dark border">{{ $item->payment_method }}</span></td>
-                            <td class="fw-bold text-danger">{{ number_format($item->total_amount, 0, ',', '.') }}đ</td>
-                            <td>
-                                @if($item->payment_status === 'paid')
-                                    <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i>Đã thanh toán</span>
-                                @else
-                                    <span class="badge bg-warning text-dark"><i class="fa-solid fa-clock me-1"></i>Chưa thanh toán</span>
-                                @endif
-                            </td>
-                            <td>
-                                @switch($item->order_status)
-                                    @case('pending')
-                                        <span class="badge bg-secondary">Chờ xử lý</span>
-                                        @break
-                                    @case('processing')
-                                        <span class="badge bg-info text-dark">Đang chuẩn bị</span>
-                                        @break
-                                    @case('shipping')
-                                        <span class="badge bg-primary">Đang giao hàng</span>
-                                        @break
-                                    @case('completed')
-                                        <span class="badge bg-success">Hoàn thành</span>
-                                        @break
-                                    @case('cancelled')
-                                        <span class="badge bg-danger">Đã hủy</span>
-                                        @break
-                                @endswitch
-                            </td>
-                            <td class="small text-muted">{{ date('d/m/Y H:i', strtotime($item->created_at)) }}</td>
-                            <td class="text-center">
-                                <a href="{{ route('admin.orders.show', $item->id) }}" class="btn btn-sm btn-outline-primary fw-semibold">
-                                    <i class="fa-solid fa-eye me-1"></i> Chi tiết
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="9" class="text-center py-4 text-muted">Chưa có đơn hàng nào!</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        @if($orders->hasPages())
-            <div class="card-footer bg-white border-0 pt-3">
-                {{ $orders->withQueryString()->links('pagination::bootstrap-5') }}
+        <nav class="top-links">
+            <a href="/"><i class="fa-solid fa-house"></i> Trang chủ</a>
+        </nav>
+    </div>
+</header>
+
+<div class="shell">
+    <aside class="side">
+        <h2>Kênh người bán</h2>
+        <a href="{{ route('admin.orders.index') }}" class="active">Q.lý đơn hàng</a>
+        <a href="{{ route('admin.products.index') }}">Q.lý sản phẩm</a>
+        <a href="{{ route('admin.products.create') }}">Thêm sản phẩm</a>
+        <a href="{{ route('admin.feedback.index')}}">Phản hồi khách hàng</a>
+    </aside>
+
+    <main class="content">
+
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
             </div>
         @endif
-    </div>
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+            </div>
+        @endif
+
+        <div class="page-head">
+            <div>
+                <h1>Đơn hàng</h1>
+                <div class="total tnum">{{ number_format($orders->total()) }} đơn hàng{{ ($keyword !== '' || $current !== '') ? ' khớp bộ lọc' : '' }}</div>
+            </div>
+        </div>
+
+        {{-- Câu nhắc việc: cần $statusCounts từ controller --}}
+        @if($pending !== null)
+            @if($pending > 0)
+                <p class="attn">
+                    Có <a href="{{ route('admin.orders.index', ['status' => 'pending']) }}">{{ $pending }} đơn chờ xử lý</a> đang đợi bạn xác nhận.
+                </p>
+            @else
+                <p class="attn ok">Không còn đơn nào chờ xử lý.</p>
+            @endif
+        @endif
+
+        <section class="panel">
+            <nav class="tabs" aria-label="Lọc theo trạng thái đơn">
+                @foreach($tabs as $value => $label)
+                    <a href="{{ route('admin.orders.index', array_filter(['status' => $value, 'keyword' => $keyword], fn($v) => $v !== '' && $v !== null)) }}"
+                       class="{{ (string)$current === (string)$value ? 'active' : '' }}">
+                        {{ $label }}
+                        @if($value === '' && $counts->isNotEmpty())
+                            <span class="count tnum">{{ $counts->sum() }}</span>
+                        @elseif($value !== '' && $counts->has($value))
+                            <span class="count tnum">{{ $counts->get($value) }}</span>
+                        @endif
+                    </a>
+                @endforeach
+            </nav>
+
+            @if($keyword !== '')
+                <div class="filter-note">
+                    Kết quả cho "<strong>{{ $keyword }}</strong>"
+                    <a href="{{ route('admin.orders.index', array_filter(['status' => $current])) }}">Xóa từ khóa</a>
+                </div>
+            @endif
+
+            <div class="table-responsive">
+                <table class="grid">
+                    <thead>
+                        <tr>
+                            <th>Mã đơn</th>
+                            <th>Khách hàng</th>
+                            <th>Thanh toán</th>
+                            <th class="num">Tổng tiền</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày đặt</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($orders as $order)
+                            <tr data-href="{{ route('admin.orders.show', $order->id) }}">
+                                <td>
+                                    <a class="code" href="{{ route('admin.orders.show', $order->id) }}">#{{ $order->order_code }}</a>
+                                </td>
+                                <td>
+                                    <span class="who">{{ $order->recipient_name }}</span>
+                                    <span class="sub tnum">{{ $order->recipient_phone }}</span>
+                                </td>
+                                <td>
+                                    <span class="pay-method">{{ $order->payment_method }}</span>
+                                    @if($order->payment_status === 'paid')
+                                        <span class="pay-state paid">Đã thanh toán</span>
+                                    @else
+                                        <span class="pay-state unpaid">Chưa thanh toán</span>
+                                    @endif
+                                </td>
+                                <td class="num money tnum">{{ number_format($order->total_amount, 0, ',', '.') }}đ</td>
+                                <td>
+                                    <span class="pill {{ $order->order_status }}">{{ $statusLabel[$order->order_status] ?? $order->order_status }}</span>
+                                </td>
+                                <td class="text-nowrap tnum">
+                                    {{ \Carbon\Carbon::parse($order->created_at)->format('d/m/Y') }}
+                                    <span class="sub">{{ \Carbon\Carbon::parse($order->created_at)->format('H:i') }}</span>
+                                </td>
+                                <td>
+                                    <a class="btn-view" href="{{ route('admin.orders.show', $order->id) }}">Chi tiết</a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7">
+                                    <div class="empty">
+                                        <i class="fa-regular fa-clipboard"></i>
+                                        @if($keyword !== '' || $current !== '')
+                                            <strong>Không có đơn hàng nào khớp bộ lọc</strong>
+                                            <a href="{{ route('admin.orders.index') }}">Xem tất cả đơn hàng</a>
+                                        @else
+                                            <strong>Chưa có đơn hàng nào</strong>
+                                            Đơn mới sẽ hiện ở đây khi khách đặt hàng.
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            @if($orders->total() > 0)
+                <nav class="pager" aria-label="Phân trang">
+                    <span class="pager-info">Hiển thị {{ $orders->firstItem() }}-{{ $orders->lastItem() }} trên {{ number_format($orders->total()) }} đơn hàng</span>
+
+                    @if($orders->hasPages())
+                        <ul>
+                            <li>
+                                @if($orders->onFirstPage())
+                                    <span class="disabled" aria-disabled="true">Trước</span>
+                                @else
+                                    <a href="{{ $orders->previousPageUrl() }}">Trước</a>
+                                @endif
+                            </li>
+
+                            @if($from > 1)
+                                <li><a href="{{ $orders->url(1) }}">1</a></li>
+                                @if($from > 2)<li><span class="gap">…</span></li>@endif
+                            @endif
+
+                            @for($i = $from; $i <= $to; $i++)
+                                <li>
+                                    @if($i === $cur)
+                                        <span class="current" aria-current="page">{{ $i }}</span>
+                                    @else
+                                        <a href="{{ $orders->url($i) }}">{{ $i }}</a>
+                                    @endif
+                                </li>
+                            @endfor
+
+                            @if($to < $last)
+                                @if($to < $last - 1)<li><span class="gap">…</span></li>@endif
+                                <li><a href="{{ $orders->url($last) }}">{{ $last }}</a></li>
+                            @endif
+
+                            <li>
+                                @if($orders->hasMorePages())
+                                    <a href="{{ $orders->nextPageUrl() }}">Sau</a>
+                                @else
+                                    <span class="disabled" aria-disabled="true">Sau</span>
+                                @endif
+                            </li>
+                        </ul>
+                    @endif
+                </nav>
+            @endif
+        </section>
+    </main>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Bấm vào cả dòng để mở chi tiết đơn (bỏ qua khi bấm vào link/nút bên trong)
+    document.querySelectorAll('tr[data-href]').forEach(function (row) {
+        row.addEventListener('click', function (e) {
+            if (e.target.closest('a, button')) return;
+            window.location = row.dataset.href;
+        });
+    });
+</script>
 </body>
 </html>

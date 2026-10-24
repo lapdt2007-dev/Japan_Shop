@@ -51,7 +51,7 @@
         <!-- Mật khẩu -->
         <div class="mb-3">
             <label class="form-label fw-semibold">Mật khẩu</label>
-            <input type="password" name="password" class="form-control @error('password') is-invalid @enderror" placeholder="Tối thiểu 6 ký tự">
+            <input type="password" name="password" class="form-control @error('password') is-invalid @enderror" placeholder="Tối thiểu 8 ký tự">
             @error('password') 
                 <div class="invalid-feedback">{{ $message }}</div> 
             @enderror

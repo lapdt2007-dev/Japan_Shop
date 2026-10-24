@@ -9,49 +9,12 @@
 
         <!-- CSS dùng chung cho sidebar + layout (tách riêng, không lặp code) -->
     <link rel="stylesheet" href="{{ asset('css/sidebar-layout.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/about.css') }}">
 
-    <style>
-.about-banner {
-            background: #fff;
-            border-radius: 16px;
-        }
-
-        .feature-icon {
-            width: 64px; height: 64px;
-            border-radius: 16px;
-            display: flex; align-items: center; justify-content: center;
-            background: #fff5f4;
-            font-size: 1.6rem;
-            color: var(--brand);
-            margin: 0 auto 12px;
-        }
-
-        .feature-box { transition: transform 0.2s ease; }
-        .feature-box:hover { transform: translateY(-4px); }
-    </style>
 </head>
 <body class="bg-light">
 
-    <aside class="side-nav d-flex flex-column">
-        <a href="{{ route('home') }}" class="{{ request()->routeIs('home') && !request('category') && !request('search') ? 'active' : '' }}">
-            <i class="fa-solid fa-house"></i> Trang chủ
-        </a>
-        <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-bag-shopping"></i> Mua
-        </a>
-        <a href="{{ route('orders.index') }}" class="{{ request()->routeIs('orders.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-box-open"></i> Hàng hóa
-        </a>
-        <a href="{{ route('about.index') }}" class="{{ request()->routeIs('about.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-circle-info"></i> Giới thiệu
-        </a>
-        <a href="{{ route('world.index') }}" class="{{ request()->routeIs('world.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-earth-asia"></i> Quốc tế
-        </a>
-        <a href="{{ route('feedback.index') }}" class="{{ request()->routeIs('feedback.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-comment-dots"></i> Phản hồi
-        </a>
-    </aside>
+   @include('layouts.sidebar')
 
     <!-- ============ NỘI DUNG CHÍNH ============ -->
     <div class="main-wrapper">
@@ -157,6 +120,7 @@
                 </div>
             </div>
         </div>
+        @include('layouts.footer')
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

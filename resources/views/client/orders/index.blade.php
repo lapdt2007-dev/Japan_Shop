@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="{{ asset('css/sidebar-layout.css') }}">
 
     <style>
-.order-tabs { border-bottom: 1px solid #eee; background: #fff; }
+        .order-tabs { border-bottom: 1px solid #eee; background: #fff; }
         .order-tabs a {
             display: inline-block;
             padding: 14px 18px;
@@ -53,26 +53,7 @@
 <body class="bg-light">
 
     <!-- ============ SIDEBAR TRÁI ============ -->
-    <aside class="side-nav d-flex flex-column">
-        <a href="{{ route('home') }}" class="{{ request()->routeIs('home') && !request('category') && !request('search') ? 'active' : '' }}">
-            <i class="fa-solid fa-house"></i> Trang chủ
-        </a>
-        <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-bag-shopping"></i> Mua
-        </a>
-        <a href="{{ route('orders.index') }}" class="{{ request()->routeIs('orders.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-box-open"></i> Hàng hóa
-        </a>
-        <a href="{{ route('about.index') }}" class="{{ request()->routeIs('about.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-circle-info"></i> Giới thiệu
-        </a>
-        <a href="{{ route('world.index') }}" class="{{ request()->routeIs('world.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-earth-asia"></i> Quốc tế
-        </a>
-        <a href="{{ route('feedback.index') }}" class="{{ request()->routeIs('feedback.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-comment-dots"></i> Phản hồi
-        </a>
-    </aside>
+    @include('layouts.sidebar')
 
     <!-- ============ NỘI DUNG CHÍNH ============ -->
     <div class="main-wrapper">
@@ -89,6 +70,14 @@
     <div class="container my-4">
 
         <h4 class="fw-bold mb-3"><i class="fa-solid fa-bag-shopping text-danger me-2"></i>Mua Hàng Của Tôi</h4>
+
+        @include('partials.flash-errors')
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fa-solid fa-circle-check me-2"></i>{{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
 
         @php
             $tabs = [
@@ -134,8 +123,7 @@
                     <select name="payment_method" class="form-select form-select-sm">
                         <option value="all">Tất cả</option>
                         <option value="cod" {{ request('payment_method') === 'cod' ? 'selected' : '' }}>Thanh toán khi nhận hàng (COD)</option>
-                        <option value="bank_transfer" {{ request('payment_method') === 'bank_transfer' ? 'selected' : '' }}>Chuyển khoản ngân hàng</option>
-                        <option value="momo" {{ request('payment_method') === 'momo' ? 'selected' : '' }}>Ví MoMo</option>
+                        <option value="bank" {{ request('payment_method') === 'bank' ? 'selected' : '' }}>Chuyển khoản ngân hàng</option>
                     </select>
                 </div>
 
@@ -249,7 +237,18 @@
                         </table>
                     </div>
 
-                    <div class="d-flex justify-content-end px-3 py-2 border-bottom">
+                    <div class="d-flex justify-content-end align-items-center px-3 py-2 border-bottom">
+                        @if($order->order_status === 'pending' && $order->payment_status === 'unpaid')
+                            <form action="{{ route('orders.cancel', $order->id) }}" method="POST" class="me-auto"
+                                  onsubmit="return confirm('Bạn chắc chắn muốn hủy đơn hàng này?');">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fa-solid fa-xmark me-1"></i>Hủy đơn
+                                </button>
+                            </form>
+                        @endif
+
                         <span class="text-muted small me-2">Tổng thanh toán đơn hàng:</span>
                         <strong class="text-danger">{{ number_format($order->total_amount ?? 0, 0, ',', '.') }}đ</strong>
                     </div>
@@ -258,6 +257,7 @@
         </div>
     </div>
 
+        @include('layouts.footer')
     </div><!-- /.main-wrapper -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

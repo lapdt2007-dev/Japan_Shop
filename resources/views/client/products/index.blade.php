@@ -9,43 +9,13 @@
 
         <!-- CSS dùng chung cho sidebar + layout (tách riêng, không lặp code) -->
     <link rel="stylesheet" href="{{ asset('css/sidebar-layout.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/order.css') }}">
 
-    <style>
-.product-card { border-radius: 14px; overflow: hidden; transition: all 0.3s ease; }
-        .product-card:hover { transform: translateY(-6px); box-shadow: 0 12px 25px rgba(0,0,0,0.1) !important; }
-        .product-img-wrapper { position: relative; height: 220px; overflow: hidden; background-color: #fff; }
-        .product-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
-        .product-card:hover .product-img { transform: scale(1.08); }
-        .product-badge { position: absolute; top: 12px; left: 12px; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; }
-        .price-tag { color: #dc3545; font-size: 1.1rem; font-weight: 700; }
-        .text-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .category-chip { transition: all 0.2s ease-in-out; border-radius: 10px; white-space: nowrap; }
-        .category-chip:hover { transform: translateY(-2px); }
-    </style>
 </head>
 <body class="bg-light">
 
     <!-- ============ SIDEBAR TRÁI ============ -->
-    <aside class="side-nav d-flex flex-column">
-        <a href="{{ route('home') }}" class="{{ request()->routeIs('home') && !request('category') && !request('search') ? 'active' : '' }}">
-            <i class="fa-solid fa-house"></i> Trang chủ
-        </a>
-        <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-bag-shopping"></i> Mua
-        </a>
-        <a href="{{ route('orders.index') }}" class="{{ request()->routeIs('orders.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-box-open"></i> Hàng hóa
-        </a>
-        <a href="{{ route('about.index') }}" class="{{ request()->routeIs('about.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-circle-info"></i> Giới thiệu
-        </a>
-        <a href="{{ route('world.index') }}" class="{{ request()->routeIs('world.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-earth-asia"></i> Quốc tế
-        </a>
-        <a href="{{ route('feedback.index') }}" class="{{ request()->routeIs('feedback.index') ? 'active' : '' }}">
-            <i class="fa-solid fa-comment-dots"></i> Phản hồi
-        </a>
-    </aside>
+    @include('layouts.sidebar')
 
     <!-- ============ NỘI DUNG CHÍNH ============ -->
     <div class="main-wrapper">
@@ -120,6 +90,7 @@
         @endif
     </div>
 
+        @include('layouts.footer')
     </div><!-- /.main-wrapper -->
 
     <!-- Bootstrap 5 JS Bundle -->

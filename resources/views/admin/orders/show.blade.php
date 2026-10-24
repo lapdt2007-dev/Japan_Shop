@@ -14,6 +14,7 @@
         <i class="fa-solid fa-arrow-left me-1"></i> Quay lại danh sách
     </a>
 
+    @include('partials.flash-errors')
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="fa-solid fa-circle-check me-2"></i>{{ session('success') }}
