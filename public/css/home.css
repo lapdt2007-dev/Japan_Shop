@@ -20,7 +20,9 @@
             box-shadow: none;
         }
 
-        .search-pill input:focus { box-shadow: none; }
+        .search-pill input:focus {
+            box-shadow: none;
+        }
 
         .search-pill .btn-search {
             background: var(--brand);
@@ -40,8 +42,13 @@
             gap: 2px;
         }
 
-        .header-icon-link i { font-size: 1.05rem; }
-        .header-icon-link:hover { color: var(--brand); }
+        .header-icon-link i {
+            font-size: 1.05rem;
+        }
+
+        .header-icon-link:hover {
+            color: var(--brand);
+        }
 
         /* ===== CATEGORY CHIP ROW ===== */
         .category-chip {
@@ -50,7 +57,9 @@
             white-space: nowrap;
         }
 
-        .category-chip:hover { transform: translateY(-2px); }
+        .category-chip:hover {
+            transform: translateY(-2px);
+        }
 
         /* ===== PROMO GRID (banner lưới kiểu sàn TMĐT) ===== */
         .promo-box {
@@ -95,9 +104,12 @@
         }
 
         .welcome-panel .stat-icon {
-            width: 34px; height: 34px;
+            width: 34px;
+            height: 34px;
             border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             background: #fff;
             font-size: 0.9rem;
         }
@@ -111,7 +123,7 @@
 
         .product-card:hover {
             transform: translateY(-6px);
-            box-shadow: 0 12px 25px rgba(0,0,0,0.1) !important;
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1) !important;
         }
 
         .product-img-wrapper {
@@ -128,7 +140,9 @@
             transition: transform 0.4s ease;
         }
 
-        .product-card:hover .product-img { transform: scale(1.08); }
+        .product-card:hover .product-img {
+            transform: scale(1.08);
+        }
 
         .product-badge {
             position: absolute;

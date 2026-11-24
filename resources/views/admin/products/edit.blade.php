@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Chỉnh Sửa Sản Phẩm</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/root.css') }}">
 </head>
 <body class="bg-light p-4">
 
